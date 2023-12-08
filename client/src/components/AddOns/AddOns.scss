@@ -1,0 +1,25 @@
+@import url('rsuite/dist/rsuite-no-reset.css');
+
+.info-header {
+    color: #26A4ED;
+    font-size: 20px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+}
+
+.rs-table-cell-content {
+    padding: 0 !important;
+    align-items: center;
+}
+
+.rs-table-row {
+    border: 1px solid #26A4ED !important;
+}
+
+.rs-checkbox-checker {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}

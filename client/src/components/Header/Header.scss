@@ -1,0 +1,24 @@
+.main-header {
+    height: 7%;
+    background: #DFF3FF;
+    display: flex;
+    justify-content: end;
+    padding: 0 20px;
+    align-items: center;
+}
+
+.header-nav-item {
+    padding: 5px;
+    font-size: 12px;
+    text-decoration: none;
+    margin: 0 20px;
+
+    .header-nav-item-info {
+        text-transform: uppercase;
+        color: #212529;
+    }
+}
+
+.header-active {
+    border: 1px solid black;
+}
