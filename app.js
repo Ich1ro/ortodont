@@ -37,4 +37,4 @@ app.all('*', (req, resp, _) => {
     resp.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'));
 });
 
-app.listen(process.env.PORT || 8080);
+app.listen(process.env.PORT || 8081);
