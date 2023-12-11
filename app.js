@@ -30,5 +30,6 @@ app.use(upload.single('file'));
 
 /* End Custom Routes */
 
-app.listen(process.env.PORT || 8081);
-console.log('App is runing');
+app.listen(process.env.PORT || 8080, () => {
+    console.log('App is runing');
+});

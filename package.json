@@ -2,11 +2,9 @@
     "name": "orthodontics-app",
     "version": "1.0.0",
     "description": "",
-    "main": "app.js",
     "scripts": {
-        "start": "ENVIRONMENT=development nodemon app.js",
-        "build": "ENVIRONMENT=production node app.js",
-        "build-ec": "ENVIRONMENT=production node app.js"
+        "start": "ENVIRONMENT=development node app.js",
+        "serve": "ENVIRONMENT=production nodemon app.js"
     },
     "repository": {
         "type": "git",
