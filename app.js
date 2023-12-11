@@ -30,11 +30,5 @@ app.use(upload.single('file'));
 
 /* End Custom Routes */
 
-
-/* Host static files of client */
-app.use(express.static(path.join(__dirname, 'client', 'build')));
-app.all('*', (req, resp, _) => {
-    resp.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'));
-});
-
 app.listen(process.env.PORT || 8081);
+console.log('App is runing');

@@ -4,8 +4,8 @@
     "description": "",
     "main": "app.js",
     "scripts": {
-        "start": "ENVIRONMENT=development cd client && npm run build && cd ../ && nodemon app.js",
-        "build": "ENVIRONMENT=production cd client && npm run build && cd ../ && node app.js",
+        "start": "ENVIRONMENT=development nodemon app.js",
+        "build": "ENVIRONMENT=production node app.js",
         "build-ec": "ENVIRONMENT=production node app.js"
     },
     "repository": {
