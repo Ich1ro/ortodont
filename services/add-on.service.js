@@ -24,7 +24,7 @@ exports.listAdminAddOns = async ({ practiceId, lastId, size, search, sortDir, so
             .where('practiceId', practiceId)
             .andWhere('id', _sortDir === 'asc' ? '>' : '<', lastId);
 
-        search && (query = query.whereLike(`%${search}%`))
+        search && (query = query.whereLike('name', `%${search}%`))
 
         var list = await query
             .orderBy(_sortBy, _sortDir)
