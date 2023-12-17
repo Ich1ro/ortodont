@@ -39,6 +39,9 @@ app.use('/api/auth', auth)
 const practiceInfo = require('./routes/practice-info.routes')
 app.use('/api/practice-info', practiceInfo)
 
+const addOns = require('./routes/add-on.routes')
+app.use('/api/add-ons', addOns)
+
 
 /* End Custom Routes */
 

@@ -1,13 +1,9 @@
 const { AVAILABLE_CARDS } = require("../constants")
 const { isValidPhoneNumber } = require('libphonenumber-js')
-const { invalidId } = require('../validators/id.validator')
 
 exports.practiceInfoValidationResult = (practiceInfo) => {
     if (!practiceInfo) {
         return { invalid: true, msg: 'Practice info entity was not provided' }
-    }
-    if (practiceInfo.id && invalidId(practiceInfo.id)) {
-        return { invalid: true, msg: 'Invalid request' }
     }
     if (practiceInfo.name === null ||
         practiceInfo.name === undefined ||
@@ -28,7 +24,7 @@ exports.practiceInfoValidationResult = (practiceInfo) => {
         practiceInfo.creditCards.length === 0) {
         return { invalid: true, msg: 'At least one credit card should be accessible in the Practice' }
     }
-    for (const card of practiceInfo.creditCards) {
+    for (let card of practiceInfo.creditCards) {
         if (!AVAILABLE_CARDS.includes(card)) {
             return { invalid: true, msg: 'At least one credit card is not allowed to be added to the Practice' }
         }
@@ -43,7 +39,7 @@ exports.practiceInfoValidationResult = (practiceInfo) => {
         practiceInfo.phones.length === 0) {
         return { invalid: true, msg: 'At least one phone number should be accessible in the Practice' }
     }
-    for (const phone of practiceInfo.phones) {
+    for (let phone of practiceInfo.phones) {
         if (!isValidPhoneNumber(phone)) {
             return { invalid: true, msg: 'At least one phone number is invalid' }
         }

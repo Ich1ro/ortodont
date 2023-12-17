@@ -2,7 +2,6 @@ const { DB } = require("../utils/db")
 const { Logger } = require('../utils/logger')
 const { S3Manager } = require('../utils/s3')
 const { badRequest, notFound, unauthorized, error, ok } = require("../utils/response")
-const { invalidId } = require('../validators/id.validator')
 const { practiceInfoValidationResult } = require("../validators/practice-info.validator")
 const { ALLOWED_IMG_EXTENSIONS, MAX_FILE_SIZE } = require("../constants")
 const { fileValidationResult } = require('../validators/file.validator')
@@ -11,9 +10,6 @@ exports.getAdminPracticeInfo = async ({ id }, role) => {
     try {
         if (role !== 0) {
             return unauthorized();
-        }
-        if (invalidId(id)) {
-            return badRequest('Invalid request')
         }
 
         const practices = await DB.pg

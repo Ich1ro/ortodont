@@ -5,7 +5,7 @@ const { getAdminPracticeInfo, putAdminPracticeInfo } = require('../services/prac
 const router = express.Router()
 
 router
-    .get('/', adminAuth, async (req, resp) => httpResponse(await getAdminPracticeInfo(req?.query), resp))
+    .get('/', adminAuth, async (req, resp) => httpResponse(await getAdminPracticeInfo(req?.query, req?.user?.role), resp))
     .put('/', adminAuth, async (req, resp) => httpResponse(await putAdminPracticeInfo(req?.body, req?.user?.role, req?.file), resp))
 
 module.exports = router
