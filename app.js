@@ -36,6 +36,9 @@ app.use('/api/health', health)
 const auth = require('./routes/auth.routes')
 app.use('/api/auth', auth)
 
+const practiceInfo = require('./routes/practice-info.routes')
+app.use('/api/practice-info', practiceInfo)
+
 
 /* End Custom Routes */
 
