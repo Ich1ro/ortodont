@@ -33,6 +33,8 @@ app.use(upload.single('file'))
 const health = require('./routes/health.routes')
 app.use('/api/health', health)
 
+const auth = require('./routes/auth.routes')
+app.use('/api/auth', auth)
 
 
 /* End Custom Routes */

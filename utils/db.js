@@ -1,5 +1,6 @@
 const { Knex } = require('knex')
 const knex = require('knex')
+const { Logger } = require('./logger')
 
 exports.DB = class DB {
     static db = null
@@ -23,6 +24,9 @@ exports.DB = class DB {
      * @returns {Knex<TRecord, TResult>} Instance
      */
     static get pg() {
+        if (!DB.db) {
+            Logger.e("utils -> DB -> pg: Instance does not exist.")
+        }
         return DB.db
     }
 }

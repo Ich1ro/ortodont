@@ -31,3 +31,38 @@ exports.imgResponse = (result, resp) => {
 
     return;
 }
+
+exports.created = (data) => {
+    return {
+        status: 201,
+        data
+    }
+}
+
+exports.ok = (data) => {
+    return {
+        status: 200,
+        data
+    }
+}
+
+exports.badRequest = (reason) => {
+    return {
+        status: 400,
+        reason: reason ? { msg: reason, key: reason.toLowerCase().split(' ').join('-') } : null
+    }
+}
+
+exports.notFound = (reason) => {
+    return {
+        status: 404,
+        reason: reason ? { msg: reason, key: reason.toLowerCase().split(' ').join('-') } : null
+    }
+}
+
+exports.error = () => {
+    return {
+        status: 500,
+        reason: { msg: 'Internal Server Error' }
+    }
+}
