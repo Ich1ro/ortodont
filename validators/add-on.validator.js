@@ -4,7 +4,7 @@ exports.addOnValidationResult = (addOn) => {
     }
     if (addOn.name === null ||
         addOn.name === undefined ||
-        /^\s*$/.test(practiceInfo.name) ||
+        /^\s*$/.test(addOn.name) ||
         addOn.name.length < 1 ||
         addOn.name.length > 500) {
         return { invalid: true, msg: 'Add-On name is invalid' }

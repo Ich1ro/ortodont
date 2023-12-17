@@ -42,6 +42,9 @@ app.use('/api/practice-info', practiceInfo)
 const addOns = require('./routes/add-on.routes')
 app.use('/api/add-ons', addOns)
 
+const treatmentTypes = require('./routes/treatment-type.routes')
+app.use('/api/treatment-types', treatmentTypes)
+
 
 /* End Custom Routes */
 

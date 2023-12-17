@@ -21,12 +21,13 @@ exports.listAdminAddOns = async ({ practiceId, lastId, size, search, sortDir, so
 
         let query = DB.pg
             .select()
+            .from('AddOn')
             .where('practiceId', practiceId)
             .andWhere('id', _sortDir === 'asc' ? '>' : '<', lastId);
 
         search && (query = query.whereLike('name', `%${search}%`))
 
-        var list = await query
+        const list = await query
             .orderBy(_sortBy, _sortDir)
             .limit(size)
 
@@ -38,33 +39,33 @@ exports.listAdminAddOns = async ({ practiceId, lastId, size, search, sortDir, so
     }
 }
 
-exports.patchAdminAddOns = async ({ addOnsToCreate, addOnsToUpdate }, role) => {
+exports.patchAdminAddOns = async ({ itemsToCreate, itemsToUpdate }, role) => {
     let trx = undefined
     try {
         if (role !== 0) {
             return unauthorized()
         }
 
-        if (addOnsToCreate?.length === undefined || addOnsToUpdate?.length === undefined) {
+        if (itemsToCreate?.length === undefined || itemsToUpdate?.length === undefined) {
             return badRequest('Invalid objects were provided')
         }
 
-        if (addOnsToCreate.length > MAX_BATCH_SIZE || addOnsToUpdate.length > MAX_BATCH_SIZE) {
+        if (itemsToCreate.length > MAX_BATCH_SIZE || itemsToUpdate.length > MAX_BATCH_SIZE) {
             return badRequest('Limit exceeded')
         }
 
-        for (let addOn of addOnsToCreate) {
+        for (let addOn of itemsToCreate) {
             delete addOn.id
             const result = addOnValidationResult(addOn)
             if (result.invalid) {
-                return badRequest('Some of add-ons where invalid. Error: ' + result.msg)
+                return badRequest('Some of add-ons were invalid. Error: ' + result.msg)
             }
         }
 
-        for (let addOn of addOnsToUpdate) {
+        for (let addOn of itemsToUpdate) {
             const result = addOnValidationResult(addOn)
             if (result.invalid) {
-                return badRequest('Some of add-ons where invalid. Error: ' + result.msg)
+                return badRequest('Some of add-ons were invalid. Error: ' + result.msg)
             }
         }
 
@@ -72,11 +73,11 @@ exports.patchAdminAddOns = async ({ addOnsToCreate, addOnsToUpdate }, role) => {
 
         let created = []
         let updated = []
-        if (addOnsToCreate.length > 0) {
-            created = await trx('AddOn').insert(addOnsToCreate, ['id'])
+        if (itemsToCreate.length > 0) {
+            created = await trx('AddOn').insert(itemsToCreate, ['id'])
         }
-        if (addOnsToUpdate.length > 0) {
-            for (let addOn of addOnsToUpdate) {
+        if (itemsToUpdate.length > 0) {
+            for (let addOn of itemsToUpdate) {
                 const newAddOn = { ...addOn }
                 delete newAddOn.id
                 await trx('AddOn').where('id', addOn.id).update(newAddOn)
@@ -90,30 +91,30 @@ exports.patchAdminAddOns = async ({ addOnsToCreate, addOnsToUpdate }, role) => {
 
     } catch (err) {
         trx && (await trx.rollback())
-        Logger.e('services -> add-on.service -> patchAdminRoles: ' + err.message, err)
+        Logger.e('services -> add-on.service -> patchAdminAddOns: ' + err.message, err)
         return error()
     }
 }
 
-exports.deleteAdminAddOns = async ({ addOnIds }, role) => {
+exports.deleteAdminAddOns = async ({ itemsIds }, role) => {
     let trx = undefined
     try {
         if (role !== 0) {
             return unauthorized()
         }
 
-        if (addOnIds?.length === undefined || addOnIds?.length === undefined) {
+        if (itemsIds?.length === undefined || itemsIds?.length === undefined) {
             return badRequest('Invalid objects were provided')
         }
 
-        if (addOnIds.length > MAX_BATCH_SIZE) {
+        if (itemsIds.length > MAX_BATCH_SIZE) {
             return badRequest('Limit exceeded')
         }
 
         trx = await DB.pg.transaction()
 
         let removed = []
-        for (let id of addOnIds) {
+        for (let id of itemsIds) {
             await trx('AddOn').where('id', id).del()
             removed.push(id)
         }
