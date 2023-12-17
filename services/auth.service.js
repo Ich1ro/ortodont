@@ -17,7 +17,7 @@ exports.adminLogin = async ({ email, password }) => {
         }
 
         const users = await DB.pg
-            .select(['email', 'password', 'role', 'shouldResetPassword', 'languageCulture', 'isActive'])
+            .select(['email', 'password', 'role', 'shouldResetPassword', 'languageCulture', 'isActive', 'practiceId'])
             .from('User')
             .where('email', email)
             .first()

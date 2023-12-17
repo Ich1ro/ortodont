@@ -60,6 +60,13 @@ exports.notFound = (reason) => {
     }
 }
 
+exports.unauthorized = () => {
+    return {
+        status: 401,
+        reason: { msg: 'Access Denied' }
+    }
+}
+
 exports.error = () => {
     return {
         status: 500,
