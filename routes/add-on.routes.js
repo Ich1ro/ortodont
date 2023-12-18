@@ -7,6 +7,6 @@ const router = express.Router()
 router
     .get('/', adminAuth, async (req, resp) => httpResponse(await listAdminAddOns(req?.query, req?.user?.role), resp))
     .patch('/', adminAuth, async (req, resp) => httpResponse(await patchAdminAddOns(req?.body, req?.user?.role), resp))
-    .post('/', adminAuth, async (req, resp) => httpResponse(await deleteAdminAddOns(req?.body, req?.user?.role), resp))
+    .post('/delete', adminAuth, async (req, resp) => httpResponse(await deleteAdminAddOns(req?.body, req?.user?.role), resp))
 
 module.exports = router

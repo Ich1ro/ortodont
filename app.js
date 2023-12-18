@@ -45,6 +45,9 @@ app.use('/api/add-ons', addOns)
 const treatmentTypes = require('./routes/treatment-type.routes')
 app.use('/api/treatment-types', treatmentTypes)
 
+const discounts = require('./routes/discount.routes')
+app.use('/api/discounts', discounts)
+
 
 /* End Custom Routes */
 

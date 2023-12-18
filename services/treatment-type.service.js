@@ -2,40 +2,12 @@ const { MAX_BATCH_SIZE } = require("../constants")
 const { DB } = require("../utils/db")
 const { Logger } = require("../utils/logger")
 const { error, unauthorized, ok } = require("../utils/response")
-const { paginationValidationResult } = require("../validators/pagination.validator")
 const { treatmentTypeValidationResult } = require("../validators/treatment-type.validator")
+const { adminTablesPagination } = require("./admin-table.service")
 
 exports.listAdminTreatmentTypes = async ({ practiceId, lastId, size, search, sortDir, sortBy }, role) => {
-    try {
-        if (role !== 0) {
-            return unauthorized()
-        }
-
-        const result = paginationValidationResult(lastId, size, search, sortDir)
-        if (result.invalid) {
-            return badRequest(result.msg)
-        }
-
-        let _sortDir = sortDir ?? 'desc'
-        let _sortBy = sortBy ? `id,${sortBy}` : 'id,name'
-
-        let query = DB.pg
-            .select()
-            .from('TreatmentType')
-            .where('TreatmentType.practiceId', practiceId)
-            .andWhere('TreatmentType.id', _sortDir === 'asc' ? '>' : '<', lastId);
-
-        search && (query = query.whereLike('name', `%${search}%`))
-
-        const list = await query
-            .orderBy(_sortBy, _sortDir)
-            .limit(size)
-
-        return ok({ list })
-    } catch (err) {
-        Logger.e('services -> add-on.service -> listAdminTreatmentTypes: ' + err.message, err)
-        return error()
-    }
+    return await adminTablesPagination({ practiceId, lastId, size, search, sortDir, sortBy}, 
+        role, 'TreatmentType', 'services -> add-on.service -> listAdminAddOns')
 }
 
 exports.getTreatmentTypesAddOns = async ({ treatmentTypeId }) => {
