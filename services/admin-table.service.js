@@ -10,20 +10,20 @@ exports.adminTablesPagination = async ({ practiceId, lastId, size, search, sortD
             return unauthorized()
         }
 
-        const result = paginationValidationResult(lastId, size, search, sortDir)
+        const result = paginationValidationResult(size, search, sortDir)
         if (result.invalid) {
             return badRequest(result.msg)
         }
 
         let _sortDir = sortDir ?? 'desc'
-        let _sortBy = sortBy ? `id,${sortBy}` : 'id,name'
+        let _sortBy = 'id' // Backend Sorting supports only Order By id for now
 
         let query = DB.pg
             .select()
             .from(tableName)
             .where('practiceId', practiceId)
-            .andWhere('id', _sortDir === 'asc' ? '>' : '<', lastId);
 
+        lastId !== undefined && lastId !== null && (query = query.andWhere('id', _sortDir === 'asc' ? '>' : '<', lastId))
         search && (query = query.whereLike('name', `%${search}%`))
 
         const list = await query

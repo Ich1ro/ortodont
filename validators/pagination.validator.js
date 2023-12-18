@@ -1,9 +1,6 @@
 const { MAX_PAGINATION_SIZE, MAX_SEARCH_TERM_LENGTH } = require("../constants")
 
-exports.paginationValidationResult = (lastId, size, search, sortDir) => {
-    if (lastId === null || lastId === undefined || lastId < 0) {
-        return { invalid: true, msg: 'Last Id is not valid' }
-    }
+exports.paginationValidationResult = (size, search, sortDir) => {
     if (size === null || size === undefined || size <= 0 || size > MAX_PAGINATION_SIZE) {
         return { invalid: true, msg: 'Size is not valid' }
     }
