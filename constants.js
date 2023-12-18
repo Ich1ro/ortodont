@@ -7,3 +7,4 @@ exports.ALLOWED_IMG_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.webp']
 exports.MAX_PAGINATION_SIZE = 1000
 exports.MAX_BATCH_SIZE = 100
 exports.MAX_SEARCH_TERM_LENGTH = 10000
+exports.RESET_PASSWORD_EXP = 1 //days

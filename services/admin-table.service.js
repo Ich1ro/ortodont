@@ -4,7 +4,7 @@ const { Logger } = require("../utils/logger")
 const { error, ok, badRequest, unauthorized } = require("../utils/response")
 const { paginationValidationResult } = require("../validators/pagination.validator")
 
-exports.adminTablesPagination = async ({ practiceId, lastId, size, search, sortDir, sortBy }, role, tableName, tag) => {
+exports.adminTablesPagination = async ({ practiceId, lastId, size, search, sortDir, sortBy }, role, tableName, tag, columns) => {
     try {
         if (role !== 0) {
             return unauthorized()
@@ -19,7 +19,7 @@ exports.adminTablesPagination = async ({ practiceId, lastId, size, search, sortD
         let _sortBy = 'id' // Backend Sorting supports only Order By id for now
 
         let query = DB.pg
-            .select()
+            .select(columns ?? '*')
             .from(tableName)
             .where('practiceId', practiceId)
 

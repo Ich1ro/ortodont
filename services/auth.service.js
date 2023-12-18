@@ -37,6 +37,7 @@ exports.adminLogin = async ({ email, password }) => {
             return badRequest('Invalid login or password')
         }
 
+        delete user.password
         const accessToken = jwt.sign({ user }, process.env.JWT_SECRET_ACCESS, { expiresIn: JWT_ACCESS_TIMEOUT })
         const refreshToken = jwt.sign({ user }, process.env.JWT_SECRET_REFRESH, { expiresIn: JWT_REFRESH_TIMEOUT })
 
@@ -57,7 +58,7 @@ exports.resetPassword = async ({ email, oldPassword, newPassword }) => {
         }
 
         const users = await DB.pg
-            .select(['email', 'password', 'isActive'])
+            .select(['email', 'password', 'isActive', 'shouldResetPassword', 'resetPasswordExpiration'])
             .from('User')
             .where('email', email)
             .first()
@@ -71,6 +72,16 @@ exports.resetPassword = async ({ email, oldPassword, newPassword }) => {
             return notFound('User was not found')
         }
 
+        if (!user.shouldResetPassword) {
+            return badRequest('User was not prompted to reset password')
+        }
+
+        const now =  Math.floor(new Date().getTime() / 1000)
+        const expiration = Math.floor(new Date(user.resetPasswordExpiration).getTime() / 1000)
+        if (expiration < now) {
+            return badRequest('Invalid login or password')
+        }
+
         const isPasswordValid = await bcrypt.compare(oldPassword, user.password)
         if (!isPasswordValid) {
             return badRequest('Invalid old password')
@@ -81,7 +92,7 @@ exports.resetPassword = async ({ email, oldPassword, newPassword }) => {
 
         await DB.pg('User')
             .where('email', email)
-            .update({ password: hashedPassword })
+            .update({ password: hashedPassword, shouldResetPassword: false })
 
         return ok();
 

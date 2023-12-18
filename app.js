@@ -51,6 +51,9 @@ app.use('/api/discounts', discounts)
 const locations = require('./routes/location.routes')
 app.use('/api/locations', locations)
 
+const users = require('./routes/user.routes')
+app.use('/api/users', users)
+
 /* End Custom Routes */
 
 try {
