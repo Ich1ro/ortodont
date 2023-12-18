@@ -80,7 +80,7 @@ exports.resetPassword = async ({ email, oldPassword, newPassword }) => {
         const hashedPassword = await bcrypt.hash(newPassword, salt)
 
         await DB.pg('User')
-            .where({ email })
+            .where('email', email)
             .update({ password: hashedPassword })
 
         return ok();
