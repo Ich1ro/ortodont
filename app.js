@@ -48,6 +48,8 @@ app.use('/api/treatment-types', treatmentTypes)
 const discounts = require('./routes/discount.routes')
 app.use('/api/discounts', discounts)
 
+const locations = require('./routes/location.routes')
+app.use('/api/locations', locations)
 
 /* End Custom Routes */
 
