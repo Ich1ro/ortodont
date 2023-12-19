@@ -114,6 +114,8 @@ exports.patchAdminUsers = async ({ itemsToCreate, itemsToUpdate }, user) => {
                 const htmlContent = `<html><body>Hello ${it.name},<br/> Your current password is ${password}. <br/> Kind regards, <br/> ${user?.name}`
                 passwordsToSend.push({ name: it.name, email: it.email, htmlContent })
             }
+
+            it.shouldResetPassword = true
         })
     }
 
