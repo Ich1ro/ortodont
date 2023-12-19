@@ -58,7 +58,7 @@ exports.resetPassword = async ({ email, oldPassword, newPassword }) => {
         }
 
         const users = await DB.pg
-            .select(['email', 'password', 'isActive', 'shouldResetPassword', 'resetPasswordExpiration'])
+            .select(['email', 'password', 'isActive', 'shouldResetPassword'])
             .from('User')
             .where('email', email)
             .first()
@@ -74,12 +74,6 @@ exports.resetPassword = async ({ email, oldPassword, newPassword }) => {
 
         if (!user.shouldResetPassword) {
             return badRequest('User was not prompted to reset password')
-        }
-
-        const now =  Math.floor(new Date().getTime() / 1000)
-        const expiration = Math.floor(new Date(user.resetPasswordExpiration).getTime() / 1000)
-        if (expiration < now) {
-            return badRequest('Invalid login or password')
         }
 
         const isPasswordValid = await bcrypt.compare(oldPassword, user.password)
