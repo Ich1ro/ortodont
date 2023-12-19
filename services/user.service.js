@@ -1,7 +1,11 @@
 const bcrypt = require('bcrypt')
 const generator = require('generate-password')
 const { RESET_PASSWORD_EXP, PASSWORD_SALT_ROUNDS } = require("../constants")
+const { DB } = require('../utils/db')
 const { sendEmails } = require('../utils/email-sender')
+const { badRequest, notFound, ok } = require('../utils/response')
+const { invalidEmail } = require('../validators/email.validator')
+const { invalidPassword } = require('../validators/password.validator')
 const { userValidationResult } = require('../validators/user.validator')
 const { adminTablesPagination, adminTablesPatch, adminTablesDelete } = require("./admin-table.service")
 
@@ -9,6 +13,50 @@ exports.listAdminUsers = async ({ practiceId, lastId, size, search, sortDir, sor
     return await adminTablesPagination({ practiceId, lastId, size, search, sortDir, sortBy },
         role, 'User', 'services -> user.service -> listAdminUsers',
         ['id', 'practiceId', 'name', 'email', 'role', 'isActive', 'languageCulture'])
+}
+
+exports.patchMyProfile = async ({ user }) => {
+    if (user.email && !invalidEmail(user.email)) {
+        return badRequest('Invalid login or password')
+    }
+
+    if (user.oldPassword && user.newPassword && (invalidPassword(user.oldPassword) || invalidPassword(user.newPassword))) {
+        return badRequest('Invalid login or password')
+    }
+
+    const _user = (await DB.pg.select().from('User').where('id', user.id).first())[0]
+    if (!_user || !_user.isActive) {
+        return notFound()
+    }
+
+    const objToSave = {}
+
+    if (user.email) {
+        const __user = (await DB.pg.select().from('User').where('email', user.email).first())[0]
+        if (__user) {
+            return badRequest('User with this email is already exist')
+        }
+        objToSave.email = email
+    }
+
+    if (user.oldPassword && user.newPassword) {
+        const isPasswordValid = await bcrypt.compare(user.oldPassword, _user.password)
+        if (!isPasswordValid) {
+            return badRequest('Invalid old password')
+        }
+
+        const salt = await bcrypt.genSalt(PASSWORD_SALT_ROUNDS);
+        const hashedPassword = await bcrypt.hash(user.newPassword, salt)
+
+        objToSave.password = hashedPassword
+        objToSave.shouldResetPassword = false
+    }
+
+    await DB.pg('User')
+        .where('id', user.id)
+        .update(objToSave)
+
+    return ok();
 }
 
 exports.patchAdminUsers = async ({ itemsToCreate, itemsToUpdate }, user) => {
