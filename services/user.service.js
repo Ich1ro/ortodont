@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt')
 const generator = require('generate-password')
-const { RESET_PASSWORD_EXP, PASSWORD_SALT_ROUNDS } = require("../constants")
+const { PASSWORD_SALT_ROUNDS } = require("../constants")
 const { DB } = require('../utils/db')
 const { sendEmails } = require('../utils/email-sender')
 const { Logger } = require('../utils/logger')
