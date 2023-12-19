@@ -1,6 +1,6 @@
 const bcrypt = require('bcrypt')
 const generator = require('generate-password')
-const { PASSWORD_SALT_ROUNDS } = require("../constants")
+const { PASSWORD_SALT_ROUNDS, CODE_EXP } = require("../constants")
 const { DB } = require('../utils/db')
 const { sendEmails } = require('../utils/email-sender')
 const { Logger } = require('../utils/logger')
@@ -18,49 +18,85 @@ exports.listAdminUsers = async ({ practiceId, lastId, size, search, sortDir, sor
 
 exports.patchMyProfile = async ({ user }) => {
     try {
-        if (user.email && !invalidEmail(user.email)) {
-            return badRequest('Invalid login or password')
+        if (!user) {
+            return badRequest('Invalid object was sent')
         }
-    
-        if (user.oldPassword && user.newPassword && (invalidPassword(user.oldPassword) || invalidPassword(user.newPassword))) {
-            return badRequest('Invalid login or password')
+
+        if (user.code === undefined || user.code === null) {
+            return badRequest('Invalid credentials')
         }
-    
-        const _user = (await DB.pg.select().from('User').where('id', user.id).first())[0]
-        if (!_user || !_user.isActive) {
-            return notFound()
+
+        if (!invalidEmail(user.email)) {
+            return badRequest('Invalid credentials')
         }
-    
-        const objToSave = {}
-    
-        if (user.email) {
-            const __user = (await DB.pg.select().from('User').where('email', user.email).first())[0]
-            if (__user) {
-                return badRequest('User with this email is already exist')
-            }
-            objToSave.email = email
+
+        if (password && !invalidPassword(user.password)) {
+            return badRequest('Invalid credentials')
         }
-    
-        if (user.oldPassword && user.newPassword) {
-            const isPasswordValid = await bcrypt.compare(user.oldPassword, _user.password)
-            if (!isPasswordValid) {
-                return badRequest('Invalid old password')
-            }
-    
-            const salt = await bcrypt.genSalt(PASSWORD_SALT_ROUNDS);
-            const hashedPassword = await bcrypt.hash(user.newPassword, salt)
-    
-            objToSave.password = hashedPassword
-            objToSave.shouldResetPassword = false
+
+        const userByEmailAndCode = (await DB.pg.select('codeExpiration').from('User').where('email', user.email).andWhere('code', user.code).first())[0]
+        if (!userByEmailAndCode || Math.floor(new Date(userByEmailAndCode.codeExpiration).getTime() / 1e3) < Math.floor(new Date().getTime() / 1e3)) {
+            return badRequest('Invalid credentials')
         }
-    
-        await DB.pg('User')
-            .where('id', user.id)
-            .update(objToSave)
-    
+
+        const userToSave = {
+            email: user.email,
+        }
+
+        if (user.password) {
+            const salt = bcrypt.genSaltSync(PASSWORD_SALT_ROUNDS)
+            userToSave.password = bcrypt.hashSync(user.password, salt)
+        }
+
+        await DB.pg('User').where('id', user.id).update(userToSave)
+
         return ok()
+
     } catch (err) {
         Logger.e("services -> user.service -> patchMyProfile: " + err.message, err)
+        return error()
+    }
+}
+
+exports.sendConfirmationCode = async ({ user }) => {
+    try {
+        if (!user) {
+            return badRequest('Invalid object was sent')
+        }
+        if (user.email) {
+            if (!invalidEmail(user.email)) {
+                return badRequest('Invalid credentials')
+            }
+
+            const userById = (await DB.pg.select('email').from('User').where('id', user.id).first())[0]
+            if (!userById) {
+                return notFound()
+            }
+
+            if (user.email !== userById.email) {
+                const userByEmail = (await DB.pg.select().from('User').where('email', user.email).first())[0]
+                if (userByEmail) {
+                    return badRequest('User with this email is already exist')
+                }
+            }
+
+            const code = generator.generate({ numbers: true, strict: true, length: 4 }).toUpperCase()
+            const codeExpiration = new Date(new Date().getTime() + CODE_EXP).toISOString()
+
+            await DB.pg('User').where('id', user.id).update({ code, codeExpiration })
+
+            const emailToSend = {
+                name: user.email,
+                email: user.email,
+                htmlContent: `<html><body>Hello, ${user.email}<br/> This is a confirmation code to verify your email address: ${code} It will expire in 15 minutes. <br/> Financial Consult Form <br/>`
+            }
+
+            await sendEmails([emailToSend], { name: 'Financial Consult Form', email: 'fcf@gmail.com' })
+        }
+
+        return ok()
+    } catch (err) {
+        Logger.e("services -> user.service -> sendConfirmationCode: " + err.message, err)
         return error()
     }
 }

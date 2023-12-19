@@ -50,7 +50,7 @@ exports.putAdminPracticeInfo = async (practiceInfo, role, file) => {
         }
 
         let id = undefined;
-        const actualPracticeInfo = (await DB.pg.select('Practice').where('id', practiceInfo.id).first())[0]
+        const actualPracticeInfo = (await DB.pg.select().from('Practice').where('id', practiceInfo.id).first())[0]
         practiceInfo.lastUpdated = new Date().toISOString()
 
         if (file) {

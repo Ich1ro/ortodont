@@ -10,14 +10,15 @@ const { JWT_ACCESS_TIMEOUT, JWT_REFRESH_TIMEOUT, PASSWORD_SALT_ROUNDS } = requir
 exports.adminLogin = async ({ email, password }) => {
     try {
         if (invalidEmail(email)) {
-            return badRequest('Invalid login or password')
+            return badRequest('Invalid credentials')
         }
         if (invalidPassword(password)) {
-            return badRequest('Invalid login or password')
+            return badRequest('Invalid credentials')
         }
 
         const users = await DB.pg
-            .select(['email', 'password', 'role', 'shouldResetPassword', 'languageCulture', 'isActive', 'practiceId'])
+            .column(['email', 'password', 'role', 'shouldResetPassword', 'languageCulture', 'isActive', 'practiceId'])
+            .select()
             .from('User')
             .where('email', email)
             .first()
@@ -34,7 +35,7 @@ exports.adminLogin = async ({ email, password }) => {
         delete user.isActive
         const isPasswordValid = await bcrypt.compare(password, user.password)
         if (!isPasswordValid) {
-            return badRequest('Invalid login or password')
+            return badRequest('Invalid credentials')
         }
 
         delete user.password
@@ -51,14 +52,15 @@ exports.adminLogin = async ({ email, password }) => {
 exports.resetPassword = async ({ email, oldPassword, newPassword }) => {
     try {
         if (invalidEmail(email)) {
-            return badRequest('Invalid login or password')
+            return badRequest('Invalid credentials')
         }
         if (invalidPassword(oldPassword) || invalidPassword(newPassword)) {
-            return badRequest('Invalid login or password')
+            return badRequest('Invalid credentials')
         }
 
         const users = await DB.pg
-            .select(['email', 'password', 'isActive', 'shouldResetPassword'])
+            .column(['email', 'password', 'isActive', 'shouldResetPassword'])
+            .select()
             .from('User')
             .where('email', email)
             .first()

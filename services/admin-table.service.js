@@ -19,7 +19,7 @@ exports.adminTablesPagination = async ({ practiceId, lastId, size, search, sortD
         let _sortBy = 'id' // Backend Sorting supports only Order By id for now
 
         let query = DB.pg
-            .select(columns ?? '*')
+            .select(...columns ?? '*')
             .from(tableName)
             .where('practiceId', practiceId)
 
