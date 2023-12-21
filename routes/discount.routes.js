@@ -5,8 +5,8 @@ const { listAdminDiscounts, patchAdminDiscounts, deleteAdminDiscounts } = requir
 const router = express.Router()
 
 router
-    .get('/', adminAuth, async (req, resp) => httpResponse(await listAdminDiscounts(req?.query, req?.user?.role), resp))
-    .patch('/', adminAuth, async (req, resp) => httpResponse(await patchAdminDiscounts(req?.body, req?.user?.role), resp))
-    .post('/delete', adminAuth, async (req, resp) => httpResponse(await deleteAdminDiscounts(req?.body, req?.user?.role), resp))
+    .get('/', adminAuth, async (req, resp) => httpResponse(await listAdminDiscounts({ user: req?.user, ...req?.query }), resp))
+    .patch('/', adminAuth, async (req, resp) => httpResponse(await patchAdminDiscounts({ user: req?.user, ...req?.body }), resp))
+    .post('/delete', adminAuth, async (req, resp) => httpResponse(await deleteAdminDiscounts({ user: req?.user, ...req?.body }), resp))
 
 module.exports = router

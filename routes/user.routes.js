@@ -5,10 +5,10 @@ const { listAdminUsers, patchAdminUsers, deleteAdminUsers, patchMyProfile, sendC
 const router = express.Router()
 
 router
-    .get('/', adminAuth, async (req, resp) => httpResponse(await listAdminUsers(req?.query, req?.user?.role), resp))
-    .patch('/', adminAuth, async (req, resp) => httpResponse(await patchAdminUsers(req?.body, req?.user), resp))
-    .patch('/my-profile', adminAuth, async (req, resp) => httpResponse(await patchMyProfile(req?.body), resp))
-    .post('/my-profile/send-code', adminAuth, async (req, resp) => httpResponse(await sendConfirmationCode(req?.body), resp))
-    .post('/delete', adminAuth, async (req, resp) => httpResponse(await deleteAdminUsers(req?.body, req?.user?.role), resp))
+    .get('/', adminAuth, async (req, resp) => httpResponse(await listAdminUsers({ user: req?.user, ...req?.query }), resp))
+    .patch('/', adminAuth, async (req, resp) => httpResponse(await patchAdminUsers({ user: req?.user, ...req?.body }), resp))
+    .patch('/my-profile', adminAuth, async (req, resp) => httpResponse(await patchMyProfile({ practiceId: req?.user?.practiceId, ...req?.body }), resp))
+    .post('/my-profile/send-code', adminAuth, async (req, resp) => httpResponse(await sendConfirmationCode({ practiceId: req?.user?.practiceId, ...req?.body }), resp))
+    .post('/delete', adminAuth, async (req, resp) => httpResponse(await deleteAdminUsers({ user: req?.user, ...req?.body }), resp))
 
 module.exports = router

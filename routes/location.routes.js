@@ -5,8 +5,8 @@ const { listAdminLocations, patchAdminLocations, deleteAdminLocations } = requir
 const router = express.Router()
 
 router
-    .get('/', adminAuth, async (req, resp) => httpResponse(await listAdminLocations(req?.query, req?.user?.role), resp))
-    .patch('/', adminAuth, async (req, resp) => httpResponse(await patchAdminLocations(req?.body, req?.user?.role), resp))
-    .post('/delete', adminAuth, async (req, resp) => httpResponse(await deleteAdminLocations(req?.body, req?.user?.role), resp))
+    .get('/', adminAuth, async (req, resp) => httpResponse(await listAdminLocations({ user: req?.user, ...req?.query }), resp))
+    .patch('/', adminAuth, async (req, resp) => httpResponse(await patchAdminLocations({ user: req?.user, ...req?.body }), resp))
+    .post('/delete', adminAuth, async (req, resp) => httpResponse(await deleteAdminLocations({ user: req?.user, ...req?.body }), resp))
 
 module.exports = router

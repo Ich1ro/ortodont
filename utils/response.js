@@ -35,20 +35,23 @@ exports.imgResponse = (result, resp) => {
 exports.created = (data) => {
     return {
         status: 201,
-        data
+        data,
+        reason: null
     }
 }
 
 exports.ok = (data) => {
     return {
         status: 200,
-        data
+        data,
+        reason: null
     }
 }
 
 exports.badRequest = (reason) => {
     return {
         status: 400,
+        data: null,
         reason: reason ? { msg: reason, key: reason.toLowerCase().split(' ').join('-') } : null
     }
 }
@@ -56,6 +59,7 @@ exports.badRequest = (reason) => {
 exports.notFound = (reason) => {
     return {
         status: 404,
+        data: null,
         reason: reason ? { msg: reason, key: reason.toLowerCase().split(' ').join('-') } : null
     }
 }
@@ -63,6 +67,7 @@ exports.notFound = (reason) => {
 exports.unauthorized = () => {
     return {
         status: 401,
+        data: null,
         reason: { msg: 'Access Denied' }
     }
 }
@@ -70,6 +75,7 @@ exports.unauthorized = () => {
 exports.error = () => {
     return {
         status: 500,
+        data: null,
         reason: { msg: 'Internal Server Error' }
     }
 }

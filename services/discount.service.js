@@ -1,16 +1,11 @@
-const { adminTablesPagination, adminTablesPatch, adminTablesDelete } = require("./admin-table.service")
 const { discountValidationResult } = require("../validators/discount.validator")
+const { adminTablesPagination, adminTablesPatch, adminTablesDelete } = require("./admin-table.service")
 
-exports.listAdminDiscounts = async ({ practiceId, lastId, size, search, sortDir, sortBy }, role) => {
-    return await adminTablesPagination({ practiceId, lastId, size, search, sortDir, sortBy },
-        role, 'Discount', 'services -> discount.service -> listAdminDiscounts')
-}
+exports.listAdminDiscounts = async ({ user, lastId, size, search, searchBy, sortDir, sortBy }) =>
+    await adminTablesPagination({ user, lastId, size, search, searchBy, sortDir, sortBy, tableName: 'Discount', tag: 'services -> discount.service -> listAdminDiscounts' })
 
-exports.patchAdminDiscounts = async ({ itemsToCreate, itemsToUpdate }, role) => {
-    return await adminTablesPatch({ itemsToCreate, itemsToUpdate }, role, discountValidationResult, 'Discount',
-        'services -> discount.service -> patchAdminDiscounts')
-}
+exports.patchAdminDiscounts = async ({ user, itemsToCreate, itemsToUpdate }) =>
+    await adminTablesPatch({ user, itemsToCreate, itemsToUpdate, validatator: discountValidationResult, tableName: 'Discount', tag: 'services -> discount.service -> patchAdminDiscounts' })
 
-exports.deleteAdminDiscounts = async ({ itemsIds }, role) => {
-    return await adminTablesDelete({ itemsIds }, role, 'Discount', 'services -> discount.service -> deleteAdminDiscounts')
-}
+exports.deleteAdminDiscounts = async ({ user, itemsIds }) =>
+    await adminTablesDelete({ user, itemsIds, tableName: 'Discount', tag: 'services -> discount.service -> deleteAdminDiscounts' })

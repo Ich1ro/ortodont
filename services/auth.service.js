@@ -42,6 +42,7 @@ exports.adminLogin = async ({ email, password }) => {
         const accessToken = jwt.sign({ user }, process.env.JWT_SECRET_ACCESS, { expiresIn: JWT_ACCESS_TIMEOUT })
         const refreshToken = jwt.sign({ user }, process.env.JWT_SECRET_REFRESH, { expiresIn: JWT_REFRESH_TIMEOUT })
 
+        delete user.practiceId
         return ok({ accessToken, refreshToken, user })
     } catch (err) {
         Logger.e('services -> auth.service -> adminLogin: ' + err.message, err)

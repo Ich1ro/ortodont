@@ -5,8 +5,8 @@ const { listAdminAddOns, patchAdminAddOns, deleteAdminAddOns } = require('../ser
 const router = express.Router()
 
 router
-    .get('/', adminAuth, async (req, resp) => httpResponse(await listAdminAddOns(req?.query, req?.user?.role), resp))
-    .patch('/', adminAuth, async (req, resp) => httpResponse(await patchAdminAddOns(req?.body, req?.user?.role), resp))
-    .post('/delete', adminAuth, async (req, resp) => httpResponse(await deleteAdminAddOns(req?.body, req?.user?.role), resp))
+    .get('/', adminAuth, async (req, resp) => httpResponse(await listAdminAddOns({ user: req?.user, ...req?.query }), resp))
+    .patch('/', adminAuth, async (req, resp) => httpResponse(await patchAdminAddOns({ user: req?.user, ...req?.body }), resp))
+    .post('/delete', adminAuth, async (req, resp) => httpResponse(await deleteAdminAddOns({ user: req?.user, ...req?.body }), resp))
 
 module.exports = router

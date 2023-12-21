@@ -5,18 +5,21 @@ const { error, unauthorized, ok } = require("../utils/response")
 const { treatmentTypeValidationResult } = require("../validators/treatment-type.validator")
 const { adminTablesPagination } = require("./admin-table.service")
 
-exports.listAdminTreatmentTypes = async ({ practiceId, lastId, size, search, sortDir, sortBy }, role) => {
-    return await adminTablesPagination({ practiceId, lastId, size, search, sortDir, sortBy}, 
-        role, 'TreatmentType', 'services -> add-on.service -> listAdminAddOns')
-}
+exports.listAdminTreatmentTypes = async ({ user, lastId, size, search, searchBy, sortDir, sortBy }) =>
+    await adminTablesPagination({ user, lastId, size, search, searchBy, sortDir, sortBy, tableName: 'TreatmentType', tag: 'services -> treatment-type.service -> listAdminTreatmentTypes' })
 
-exports.getTreatmentTypesAddOns = async ({ treatmentTypeId }) => {
+exports.getTreatmentTypesAddOns = async ({ practiceId, treatmentTypeId }) => {
     try {
+        if (practiceId === null || practiceId === undefined) {
+            return unauthorized()
+        }
+
         const list = await DB.pg
             .select()
             .from('AddOn')
             .where('treatmentId', treatmentTypeId)
-        
+            .andWhere('practiceId', practiceId)
+
         return ok({ list })
     } catch (err) {
         Logger.e('services -> add-on.service -> getTreatmentTypesAddOns: ' + err.message, err)
@@ -24,10 +27,10 @@ exports.getTreatmentTypesAddOns = async ({ treatmentTypeId }) => {
     }
 }
 
-exports.patchAdminTreatmentTypes = async ({ itemsToCreate, itemsToUpdate }, role) => {
+exports.patchAdminTreatmentTypes = async ({ user, itemsToCreate, itemsToUpdate }) => {
     let trx = undefined
     try {
-        if (role !== 0) {
+        if (!user || user.role !== 0) {
             return unauthorized()
         }
 
@@ -45,6 +48,7 @@ exports.patchAdminTreatmentTypes = async ({ itemsToCreate, itemsToUpdate }, role
             if (result.invalid) {
                 return badRequest('Some of treatment types were invalid. Error: ' + result.msg)
             }
+            item.practiceId = user.practiceId
         }
 
         for (let item of itemsToUpdate) {
@@ -66,7 +70,7 @@ exports.patchAdminTreatmentTypes = async ({ itemsToCreate, itemsToUpdate }, role
                 const id = (await trx('TreatmentType').insert(item, ['id']))[0]
                 if (addOnIds?.length > 0) {
                     for (let addOnId of addOnIds) {
-                        await trx('AddOn').where('id', addOnId).update('treatmentId', id)
+                        await trx('AddOn').where('id', addOnId).andWhere('practiceId', user.practiceId).update('treatmentId', id)
                     }
                 }
                 created.push(id)
@@ -83,17 +87,17 @@ exports.patchAdminTreatmentTypes = async ({ itemsToCreate, itemsToUpdate }, role
                 delete newTreatmentType.addOnIds
                 delete newTreatmentType.removedAddOnIds
 
-                await trx('AddOn').where('id', item.id).update(newTreatmentType)
+                await trx('AddOn').where('id', item.id).andWhere('practiceId', user.practiceId).update(newTreatmentType)
 
                 if (addOnIds?.length > 0) {
                     for (let addOnId of addOnIds) {
-                        await trx('AddOn').where('id', addOnId).update('treatmentId', item.id)
+                        await trx('AddOn').where('id', addOnId).andWhere('practiceId', user.practiceId).update('treatmentId', item.id)
                     }
                 }
 
                 if (removedAddOnIds?.length > 0) {
                     for (let addOnId of removedAddOnIds) {
-                        await trx('AddOn').where('id', addOnId).update('treatmentId', null)
+                        await trx('AddOn').where('id', addOnId).andWhere('practiceId', user.practiceId).update('treatmentId', null)
                     }
                 }
 
@@ -107,15 +111,15 @@ exports.patchAdminTreatmentTypes = async ({ itemsToCreate, itemsToUpdate }, role
 
     } catch (err) {
         trx && (await trx.rollback())
-        Logger.e('services -> add-on.service -> patchAdminTreatmentTypes: ' + err.message, err)
+        Logger.e('services -> treatment-type.service -> patchAdminTreatmentTypes: ' + err.message, err)
         return error()
     }
 }
 
-exports.deleteAdminTreatmentTypes = async ({ itemsIds }, role) => {
+exports.deleteAdminTreatmentTypes = async ({ user, itemsIds }) => {
     let trx = undefined
     try {
-        if (role !== 0) {
+        if (!user || user.role !== 0) {
             return unauthorized()
         }
 
@@ -131,8 +135,8 @@ exports.deleteAdminTreatmentTypes = async ({ itemsIds }, role) => {
 
         let removed = []
         for (let id of itemsIds) {
-            await trx('TreatmentType').where('id', id).del()
-            await trx('AddOn').where('treatmentId', id).update('treatmentId', null)
+            await trx('TreatmentType').where('id', id).andWhere('practiceId', user.practiceId).del()
+            await trx('AddOn').where('treatmentId', id).andWhere('practiceId', user.practiceId).update('treatmentId', null)
             removed.push(id)
         }
 
@@ -142,7 +146,7 @@ exports.deleteAdminTreatmentTypes = async ({ itemsIds }, role) => {
 
     } catch (err) {
         trx && (await trx.rollback())
-        Logger.e('services -> add-on.service -> deleteAdminTreatmentTypes: ' + err.message, err)
+        Logger.e('services -> treatment-type.service -> deleteAdminTreatmentTypes: ' + err.message, err)
         return error()
     }
 }

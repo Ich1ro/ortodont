@@ -4,9 +4,28 @@ const { Logger } = require("../utils/logger")
 const { error, ok, badRequest, unauthorized } = require("../utils/response")
 const { paginationValidationResult } = require("../validators/pagination.validator")
 
-exports.adminTablesPagination = async ({ practiceId, lastId, size, search, sortDir, sortBy }, role, tableName, tag, columns) => {
+/**
+ * Generic Function To Paginate Through Admin Tables
+ * @param {{
+ *  user: { email: string, role: number, shouldResetPassword: boolean, languageCulture: string, practiceId: string },
+ *  lastId: number,
+ *  size: number,
+ *  search: string,
+ *  searchBy: string,
+ *  sortDir: ['desc', 'asc'],
+ *  sortBy: string,
+ *  tableName: string,
+ *  columns: string[],
+ *  tag: string,
+ *  allowStaff: boolean
+ * }} request
+ *  
+ * @returns { Promise } 
+ */
+exports.adminTablesPagination = async (request) => {
+    const { user, lastId, size, search, searchBy, sortDir, sortBy, tableName, columns, tag, allowStaff } = request
     try {
-        if (role !== 0) {
+        if (!user || (!allowStaff && user.role !== 0)) {
             return unauthorized()
         }
 
@@ -16,15 +35,17 @@ exports.adminTablesPagination = async ({ practiceId, lastId, size, search, sortD
         }
 
         let _sortDir = sortDir ?? 'desc'
-        let _sortBy = 'id' // Backend Sorting supports only Order By id for now
+        let _sortBy = sortBy ?? 'id' // Proper Backend Sorting supports only Order By id for now
 
         let query = DB.pg
             .select(...columns ?? '*')
             .from(tableName)
-            .where('practiceId', practiceId)
+            .where('practiceId', user.practiceId)
 
         lastId !== undefined && lastId !== null && (query = query.andWhere('id', _sortDir === 'asc' ? '>' : '<', lastId))
-        search && (query = query.whereLike('name', `%${search}%`))
+
+        let _searchBy = searchBy ?? 'name'
+        search && (query = query.whereLike(_searchBy, `%${search}%`))
 
         const list = await query
             .orderBy(_sortBy, _sortDir)
@@ -38,10 +59,25 @@ exports.adminTablesPagination = async ({ practiceId, lastId, size, search, sortD
     }
 }
 
-exports.adminTablesPatch = async ({ itemsToCreate, itemsToUpdate }, role, validatator, tableName, tag) => {
+/**
+ * Generic Function To Patch Data To Admin Tables
+ * @param {{
+*  user: { email: string, role: number, shouldResetPassword: boolean, languageCulture: string, practiceId: string },
+*  itemsToCreate: any[],
+*  itemsToUpdate: any[],
+*  validatator: (item: any) => ({ invalid: boolean, msg: string | null }),
+*  tableName: string,
+*  tag: string,
+*  allowStaff: boolean
+* }} request
+*  
+* @returns { Promise } 
+*/
+exports.adminTablesPatch = async (request) => {
     let trx = undefined
+    const { user, itemsToCreate, itemsToUpdate, validatator, tableName, tag, allowStaff } = request
     try {
-        if (role !== 0) {
+        if (!user || (!allowStaff && user.role !== 0)) {
             return unauthorized()
         }
 
@@ -59,6 +95,7 @@ exports.adminTablesPatch = async ({ itemsToCreate, itemsToUpdate }, role, valida
             if (result.invalid) {
                 return badRequest('Some of items were invalid. Error: ' + result.msg)
             }
+            item.practiceId = user.practiceId
         }
 
         for (let item of itemsToUpdate) {
@@ -79,7 +116,7 @@ exports.adminTablesPatch = async ({ itemsToCreate, itemsToUpdate }, role, valida
             for (let item of itemsToUpdate) {
                 const newItem = { ...item }
                 delete newItem.id
-                await trx(tableName).where('id', item.id).update(newItem)
+                await trx(tableName).where('id', item.id).andWhere('practiceId', user.practiceId).update(newItem)
                 updated.push(item.id)
             }
         }
@@ -95,10 +132,23 @@ exports.adminTablesPatch = async ({ itemsToCreate, itemsToUpdate }, role, valida
     }
 }
 
-exports.adminTablesDelete = async ({ itemsIds }, role, tableName, tag) => {
+/**
+ * Generic Function To Delete Data From Admin Tables
+ * @param {{
+*  user: { email: string, role: number, shouldResetPassword: boolean, languageCulture: string, practiceId: string },
+*  itemsIds: number[],
+*  tableName: string,
+*  tag: string,
+*  allowStaff: boolean
+* }} request
+*  
+* @returns { Promise } 
+*/
+exports.adminTablesDelete = async (request) => {
     let trx = undefined
+    const { user, itemsIds, tableName, tag, allowStaff } = request
     try {
-        if (role !== 0) {
+        if (!user || (!allowStaff && user.role !== 0)) {
             return unauthorized()
         }
 
@@ -114,7 +164,7 @@ exports.adminTablesDelete = async ({ itemsIds }, role, tableName, tag) => {
 
         let removed = []
         for (let id of itemsIds) {
-            await trx(tableName).where('id', id).del()
+            await trx(tableName).where('id', id).andWhere('practiceId', user.practiceId).del()
             removed.push(id)
         }
 

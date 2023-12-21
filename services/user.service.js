@@ -4,20 +4,25 @@ const { PASSWORD_SALT_ROUNDS, CODE_EXP } = require("../constants")
 const { DB } = require('../utils/db')
 const { sendEmails } = require('../utils/email-sender')
 const { Logger } = require('../utils/logger')
-const { badRequest, notFound, ok, error } = require('../utils/response')
+const { badRequest, notFound, ok, error, unauthorized } = require('../utils/response')
 const { invalidEmail } = require('../validators/email.validator')
 const { invalidPassword } = require('../validators/password.validator')
 const { userValidationResult } = require('../validators/user.validator')
 const { adminTablesPagination, adminTablesPatch, adminTablesDelete } = require("./admin-table.service")
 
-exports.listAdminUsers = async ({ practiceId, lastId, size, search, sortDir, sortBy }, role) => {
-    return await adminTablesPagination({ practiceId, lastId, size, search, sortDir, sortBy },
-        role, 'User', 'services -> user.service -> listAdminUsers',
-        ['id', 'practiceId', 'name', 'email', 'role', 'isActive', 'languageCulture'])
-}
+exports.listAdminUsers = async ({ user, lastId, size, search, searchBy, sortDir, sortBy }) =>
+    await adminTablesPagination({
+        user, lastId, size, search, searchBy, sortDir, sortBy,
+        tableName: 'User', columns: ['id', 'practiceId', 'name', 'email', 'role', 'isActive', 'languageCulture'],
+        tag: 'services -> user.service -> listAdminUsers'
+    })
 
-exports.patchMyProfile = async ({ user }) => {
+
+exports.patchMyProfile = async ({ practiceId, user }) => {
     try {
+        if (practiceId === null || practiceId == undefined) {
+            return unauthorized()
+        }
         if (!user) {
             return badRequest('Invalid object was sent')
         }
@@ -34,7 +39,7 @@ exports.patchMyProfile = async ({ user }) => {
             return badRequest('Invalid credentials')
         }
 
-        const userByEmailAndCode = (await DB.pg.select('codeExpiration').from('User').where('email', user.email).andWhere('code', user.code).first())[0]
+        const userByEmailAndCode = (await DB.pg.select('codeExpiration').from('User').where('email', user.email).andWhere('code', user.code).andWhere('practiceId', practiceId).first())[0]
         if (!userByEmailAndCode || Math.floor(new Date(userByEmailAndCode.codeExpiration).getTime() / 1e3) < Math.floor(new Date().getTime() / 1e3)) {
             return badRequest('Invalid credentials')
         }
@@ -58,8 +63,11 @@ exports.patchMyProfile = async ({ user }) => {
     }
 }
 
-exports.sendConfirmationCode = async ({ user }) => {
+exports.sendConfirmationCode = async ({ practiceId, user }) => {
     try {
+        if (practiceId === null || practiceId == undefined) {
+            return unauthorized()
+        }
         if (!user) {
             return badRequest('Invalid object was sent')
         }
@@ -68,13 +76,13 @@ exports.sendConfirmationCode = async ({ user }) => {
                 return badRequest('Invalid credentials')
             }
 
-            const userById = (await DB.pg.select('email').from('User').where('id', user.id).first())[0]
+            const userById = (await DB.pg.select('email').from('User').where('id', user.id).andWhere('practiceId', practiceId).first())[0]
             if (!userById) {
                 return notFound()
             }
 
             if (user.email !== userById.email) {
-                const userByEmail = (await DB.pg.select().from('User').where('email', user.email).first())[0]
+                const userByEmail = (await DB.pg.select().from('User').where('email', user.email).andWhere('practiceId', practiceId).first())[0]
                 if (userByEmail) {
                     return badRequest('User with this email is already exist')
                 }
@@ -101,7 +109,7 @@ exports.sendConfirmationCode = async ({ user }) => {
     }
 }
 
-exports.patchAdminUsers = async ({ itemsToCreate, itemsToUpdate }, user) => {
+exports.patchAdminUsers = async ({ user, itemsToCreate, itemsToUpdate }) => {
     const passwordsToSend = [];
 
     if (itemsToCreate?.length !== undefined) {
@@ -119,8 +127,8 @@ exports.patchAdminUsers = async ({ itemsToCreate, itemsToUpdate }, user) => {
         })
     }
 
-    const result = await adminTablesPatch({ itemsToCreate, itemsToUpdate }, user?.role, userValidationResult, 'User',
-        'services -> user.service -> patchAdminUsers')
+    const result =
+        await adminTablesPatch({ user, itemsToCreate, itemsToUpdate, validatator: userValidationResult, tableName: 'User', tag: 'services -> user.service -> patchAdminUsers' })
 
     if (result.status === 200) {
         await sendEmails(passwordsToSend, { name: user?.name, email: user?.email })
@@ -129,6 +137,6 @@ exports.patchAdminUsers = async ({ itemsToCreate, itemsToUpdate }, user) => {
     return result
 }
 
-exports.deleteAdminUsers = async ({ itemsIds }, role) => {
-    return await adminTablesDelete({ itemsIds }, role, 'User', 'services -> user.service -> deleteAdminUsers')
+exports.deleteAdminUsers = async ({ user, itemsIds }) => {
+    return await adminTablesDelete({ user, itemsIds, tableName: 'User', tag: 'services -> user.service -> deleteAdminUsers' })
 }
