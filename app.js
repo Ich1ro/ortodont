@@ -54,6 +54,9 @@ app.use('/api/locations', locations)
 const users = require('./routes/user.routes')
 app.use('/api/users', users)
 
+const consult = require('./routes/consult.routes')
+app.use('/api/consult', consult)
+
 /* End Custom Routes */
 
 try {

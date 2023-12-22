@@ -1,3 +1,4 @@
+const { Knex } = require("knex")
 const { MAX_BATCH_SIZE } = require("../constants")
 const { DB } = require("../utils/db")
 const { Logger } = require("../utils/logger")
@@ -17,13 +18,14 @@ const { paginationValidationResult } = require("../validators/pagination.validat
  *  tableName: string,
  *  columns: string[],
  *  tag: string,
- *  allowStaff: boolean
+ *  allowStaff: boolean,
+ *  extraFilter: (query: Knex<TRecord, TResult>) => void
  * }} request
  *  
  * @returns { Promise } 
  */
 exports.adminTablesPagination = async (request) => {
-    const { user, lastId, size, search, searchBy, sortDir, sortBy, tableName, columns, tag, allowStaff } = request
+    const { user, lastId, size, search, searchBy, sortDir, sortBy, tableName, columns, tag, allowStaff, extraFilter } = request
     try {
         if (!user || (!allowStaff && user.role !== 0)) {
             return unauthorized()
@@ -46,6 +48,8 @@ exports.adminTablesPagination = async (request) => {
 
         let _searchBy = searchBy ?? 'name'
         search && (query = query.whereLike(_searchBy, `%${search}%`))
+
+        extraFilter && extraFilter(query)
 
         const list = await query
             .orderBy(_sortBy, _sortDir)
@@ -111,6 +115,11 @@ exports.adminTablesPatch = async (request) => {
         let updated = []
         if (itemsToCreate.length > 0) {
             created = await trx(tableName).insert(itemsToCreate, ['id'])
+            if (created === null || created === undefined || created.length === 0) {
+                await trx.rollback()
+                Logger.e(tag + " : Result of item creation is null or undefined")
+                return error()
+            }
         }
         if (itemsToUpdate.length > 0) {
             for (let item of itemsToUpdate) {
