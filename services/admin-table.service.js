@@ -27,7 +27,7 @@ const { paginationValidationResult } = require("../validators/pagination.validat
 exports.adminTablesPagination = async (request) => {
     const { user, lastId, size, search, searchBy, sortDir, sortBy, tableName, columns, tag, allowStaff, extraFilter } = request
     try {
-        if (!user || (!allowStaff && user.role !== 0)) {
+        if (!user || (allowStaff ? user.role === 2 : user.role !== 0)) {
             return unauthorized()
         }
 
@@ -81,7 +81,7 @@ exports.adminTablesPatch = async (request) => {
     let trx = undefined
     const { user, itemsToCreate, itemsToUpdate, validatator, tableName, tag, allowStaff } = request
     try {
-        if (!user || (!allowStaff && user.role !== 0)) {
+        if (!user || (allowStaff ? user.role === 2 : user.role !== 0)) {
             return unauthorized()
         }
 
@@ -157,7 +157,7 @@ exports.adminTablesDelete = async (request) => {
     let trx = undefined
     const { user, itemsIds, tableName, tag, allowStaff } = request
     try {
-        if (!user || (!allowStaff && user.role !== 0)) {
+        if (!user || (allowStaff ? user.role === 2 : user.role !== 0)) {
             return unauthorized()
         }
 

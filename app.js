@@ -57,6 +57,9 @@ app.use('/api/users', users)
 const consult = require('./routes/consult.routes')
 app.use('/api/consult', consult)
 
+const presentation = require('./routes/presentation.routes')
+app.use('/api/presentation', presentation)
+
 /* End Custom Routes */
 
 try {

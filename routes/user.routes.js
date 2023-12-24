@@ -7,8 +7,8 @@ const router = express.Router()
 router
     .get('/', adminAuth, async (req, resp) => httpResponse(await listAdminUsers({ user: req?.user, ...req?.query }), resp))
     .patch('/', adminAuth, async (req, resp) => httpResponse(await patchAdminUsers({ user: req?.user, ...req?.body }), resp))
-    .patch('/my-profile', adminAuth, async (req, resp) => httpResponse(await patchMyProfile({ practiceId: req?.user?.practiceId, ...req?.body }), resp))
-    .post('/my-profile/send-code', adminAuth, async (req, resp) => httpResponse(await sendConfirmationCode({ practiceId: req?.user?.practiceId, ...req?.body }), resp))
+    .patch('/my-profile', adminAuth, async (req, resp) => httpResponse(await patchMyProfile({ authUser: req?.user, ...req?.body }), resp))
+    .post('/my-profile/send-code', adminAuth, async (req, resp) => httpResponse(await sendConfirmationCode({ authUser: req?.user, ...req?.body }), resp))
     .post('/delete', adminAuth, async (req, resp) => httpResponse(await deleteAdminUsers({ user: req?.user, ...req?.body }), resp))
 
 module.exports = router

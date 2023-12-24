@@ -6,7 +6,7 @@ const { badRequest, notFound, ok, error } = require('../utils/response')
 const { invalidEmail } = require("../validators/email.validator")
 const { invalidPassword } = require("../validators/password.validator")
 const { JWT_ACCESS_TIMEOUT, JWT_REFRESH_TIMEOUT, PASSWORD_SALT_ROUNDS } = require('../constants')
-
+//TODO: Add BP login logic to the current auth
 exports.adminLogin = async ({ email, password }) => {
     try {
         if (invalidEmail(email)) {

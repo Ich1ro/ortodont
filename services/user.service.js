@@ -18,10 +18,10 @@ exports.listAdminUsers = async ({ user, lastId, size, search, searchBy, sortDir,
     })
 
 
-exports.patchMyProfile = async ({ practiceId, user }) => {
+exports.patchMyProfile = async ({ authUser, user }) => {
     try {
-        if (practiceId === null || practiceId == undefined) {
-            return unauthorized()
+        if (!authUser || authUser.role === 2) {
+            return unauthorized();
         }
         if (!user) {
             return badRequest('Invalid object was sent')
@@ -39,7 +39,7 @@ exports.patchMyProfile = async ({ practiceId, user }) => {
             return badRequest('Invalid credentials')
         }
 
-        const userByEmailAndCode = (await DB.pg.select('codeExpiration').from('User').where('email', user.email).andWhere('code', user.code).andWhere('practiceId', practiceId).first())[0]
+        const userByEmailAndCode = (await DB.pg.select('codeExpiration').from('User').where('email', user.email).andWhere('code', user.code).andWhere('practiceId', authUser.practiceId).first())[0]
         if (!userByEmailAndCode || Math.floor(new Date(userByEmailAndCode.codeExpiration).getTime() / 1e3) < Math.floor(new Date().getTime() / 1e3)) {
             return badRequest('Invalid credentials')
         }
@@ -63,10 +63,10 @@ exports.patchMyProfile = async ({ practiceId, user }) => {
     }
 }
 
-exports.sendConfirmationCode = async ({ practiceId, user }) => {
+exports.sendConfirmationCode = async ({ authUser, user }) => {
     try {
-        if (practiceId === null || practiceId == undefined) {
-            return unauthorized()
+        if (!authUser || authUser.role === 2) {
+            return unauthorized();
         }
         if (!user) {
             return badRequest('Invalid object was sent')
@@ -76,13 +76,13 @@ exports.sendConfirmationCode = async ({ practiceId, user }) => {
                 return badRequest('Invalid credentials')
             }
 
-            const userById = (await DB.pg.select('email').from('User').where('id', user.id).andWhere('practiceId', practiceId).first())[0]
+            const userById = (await DB.pg.select('email').from('User').where('id', user.id).andWhere('practiceId', authUser.practiceId).first())[0]
             if (!userById) {
                 return notFound()
             }
 
             if (user.email !== userById.email) {
-                const userByEmail = (await DB.pg.select().from('User').where('email', user.email).andWhere('practiceId', practiceId).first())[0]
+                const userByEmail = (await DB.pg.select().from('User').where('email', user.email).andWhere('practiceId', authUser.practiceId).first())[0]
                 if (userByEmail) {
                     return badRequest('User with this email is already exist')
                 }
@@ -112,6 +112,9 @@ exports.sendConfirmationCode = async ({ practiceId, user }) => {
 exports.patchAdminUsers = async ({ user, itemsToCreate, itemsToUpdate }) => {
     const passwordsToSend = [];
 
+    if (!user || user.role === 2) {
+        return unauthorized();
+    }
     if (itemsToCreate?.length !== undefined) {
         itemsToCreate.forEach(it => {
             const salt = bcrypt.genSaltSync(PASSWORD_SALT_ROUNDS)

@@ -4,7 +4,7 @@ const { Logger } = require('../utils/logger')
 const { error, unauthorized, notFound, ok, badRequest } = require("../utils/response")
 const { patientValidationResult } = require("../validators/patient.validator")
 const { adminTablesPagination } = require("./admin-table.service")
-
+//TODO: Download Contract, eFax and download OrthoBanc form
 
 exports.listAdminPatients = async ({ user, lastId, size, search, searchBy, sortDir, sortBy, locationId, status }) =>
     await adminTablesPagination({
@@ -26,7 +26,7 @@ exports.listAdminPatients = async ({ user, lastId, size, search, searchBy, sortD
 
 exports.getAdminPatientById = async ({ user, id }) => {
     try {
-        if (!user) {
+        if (!user || user.role === 2) {
             return unauthorized()
         }
 
@@ -83,11 +83,11 @@ exports.getAdminPatientById = async ({ user, id }) => {
         return error()
     }
 }
-
+// TODO: Generate avatar colors for new users
 exports.postAdminPatient = async ({ user, patient }) => {
     let trx = undefined
     try {
-        if (!user) {
+        if (!user || user.role === 2) {
             return unauthorized()
         }
 
@@ -127,6 +127,8 @@ exports.postAdminPatient = async ({ user, patient }) => {
             await trx('Patient').where('id', patient.id).andWhere('practiceId', user.practiceId).update(newPatient)
             await trx('Treatment').where('patientId', patient.id).del()
         } else {
+            patient.createdAt = newPatient.createdAt = new Date().toISOString()
+            patient.status = newPatient.status = 0
             const createdPatientIds = await trx('Patient').insert(newPatient, ['id'])
             if (createdPatientIds === null || createdPatientIds === undefined || createdPatientIds.length === 0) {
                 await trx.rollback()
@@ -183,7 +185,7 @@ exports.postAdminPatient = async ({ user, patient }) => {
 
 exports.deleteAdminPatient = async ({ user, id }) => {
     try {
-        if (!user) {
+        if (!user || user.role === 2) {
             return unauthorized()
         }
         if (id === null || id === undefined) {
