@@ -2,40 +2,42 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const { DB } = require("../utils/db")
 const { Logger } = require('../utils/logger')
-const { badRequest, notFound, ok, error } = require('../utils/response')
+const { badRequest, notFound, ok, error, unauthorized } = require('../utils/response')
 const { invalidEmail } = require("../validators/email.validator")
 const { invalidPassword } = require("../validators/password.validator")
 const { JWT_ACCESS_TIMEOUT, JWT_REFRESH_TIMEOUT, PASSWORD_SALT_ROUNDS } = require('../constants')
-//TODO: Add BP login logic to the current auth
+const { decrypt } = require('../utils/aes')
+
 exports.adminLogin = async ({ email, password }) => {
     try {
         if (invalidEmail(email)) {
-            return badRequest('Invalid credentials')
+            Logger.i('User email is invalid: ' + email)
+            return unauthorized()
         }
         if (invalidPassword(password)) {
-            return badRequest('Invalid credentials')
+            Logger.i('User password is invalid for: ' + email)
+            return unauthorized()
         }
 
-        const users = await DB.pg
+        const user = (await DB.pg
             .column(['email', 'password', 'role', 'shouldResetPassword', 'languageCulture', 'isActive', 'practiceId'])
             .select()
             .from('User')
             .where('email', email)
-            .first()
+            .first())[0]
 
-        if (users === undefined || users === null || users.length === 0) {
-            return notFound('User was not found');
-        }
-
-        const user = users[0]
-        if (!user.isActive) {
-            return notFound('User was not found')
+        if (!user || !user.isActive) {
+            delete user.password
+            Logger.i('User is not found by email: ' + email)
+            return unauthorized()
         }
 
         delete user.isActive
         const isPasswordValid = await bcrypt.compare(password, user.password)
         if (!isPasswordValid) {
-            return badRequest('Invalid credentials')
+            delete user.password
+            Logger.i('User password does not match their current one for: ' + JSON.stringify(user))
+            return unauthorized()
         }
 
         delete user.password
@@ -50,8 +52,77 @@ exports.adminLogin = async ({ email, password }) => {
     }
 }
 
-exports.resetPassword = async ({ email, oldPassword, newPassword }) => {
+exports.login = async (p, id, patientData) => {
     try {
+        if (p === null || p === undefined || id === null || id === undefined) {
+            Logger.i('Query parameters are null or undefined')
+            return unauthorized()
+        }
+        if (patientData.lastName === undefined || patientData.lastName === null) {
+            Logger.i('Patient last name is null or undefined: ' + id)
+            return unauthorized()
+        }
+        if (patientData.patientNumber === undefined || patientData.patientNumber === null) {
+            Logger.i('Patient patient number is null or undefined: ' + id)
+            return unauthorized()
+        }
+
+        const patient = (await DB.pg('PatientAes')
+            .join('Patient', 'PatientAes.patientId', '=', 'Patient.id')
+            .select(DB.pg.raw(`PatientAes.*, Patient.patientNumber as patientNumber, Patient.email as email, Patient.practiceId as practiceId, Patient.lastName as lastName`))
+            .where('Patient.id', id)
+            .first())[0]
+
+        if (!patient) {
+            Logger.i('Patient is not found by id: ' + id)
+            return unauthorized()
+        }
+
+        if (patient.iv === null || patient.tag === null) {
+            Logger.i('Cipher components absent for patient: ' + id)
+            return unauthorized()
+        }
+        
+        const decrypted = decrypt(p, patient.iv, patient.tag)
+        if (!decrypted) {
+            Logger.i('Patient info decryption failed: ' + id)
+            return unauthorized()
+        }
+
+        const decryptedObj = JSON.parse(decrypted)
+        if (decryptedObj.lastName !== patient.lastName || decryptedObj.patientNumber !== patient.patientNumber) {
+            Logger.i('Decrypted patient info discrepancy for patient: ' + decrypted)
+            return unauthorized()
+        }
+        if (decryptedObj.lastName !== patientData.lastName || decryptedObj.patientNumber !== patientData.patientNumber) {
+            Logger.i('Decrypted patient info discrepancy for patient rquest body. Decrypted: ' + decrypted + " | Patient request body: " + JSON.stringify(patientData))
+            return unauthorized()
+        }
+
+        const patientForToken = {
+            id: patient.id,
+            patientNumber: patient.patientNumber,
+            email: patient.email,
+            role: 2,
+            practiceId: patient.practiceId
+        }
+
+        const accessToken = jwt.sign({ user: patientForToken }, process.env.JWT_SECRET_ACCESS, { expiresIn: JWT_ACCESS_TIMEOUT })
+        const refreshToken = jwt.sign({ user: patientForToken }, process.env.JWT_SECRET_REFRESH, { expiresIn: JWT_REFRESH_TIMEOUT })
+
+        return ok({ accessToken, refreshToken, user })
+
+    } catch (err) {
+        Logger.e('services -> auth.service -> login: ' + err.message, err)
+        return error()
+    }
+}
+
+exports.resetPassword = async (authUser, { email, oldPassword, newPassword }) => {
+    try {
+        if (!authUser || authUser.role === 2) {
+            return unauthorized()
+        }
         if (invalidEmail(email)) {
             return badRequest('Invalid credentials')
         }
@@ -59,19 +130,14 @@ exports.resetPassword = async ({ email, oldPassword, newPassword }) => {
             return badRequest('Invalid credentials')
         }
 
-        const users = await DB.pg
+        const user = (await DB.pg
             .column(['email', 'password', 'isActive', 'shouldResetPassword'])
             .select()
             .from('User')
             .where('email', email)
-            .first()
+            .first())[0]
 
-        if (users === undefined || users === null || users.length === 0) {
-            return notFound('User was not found')
-        }
-
-        const user = users[0]
-        if (!user.isActive) {
+        if (!user || !user.isActive) {
             return notFound('User was not found')
         }
 
@@ -99,7 +165,7 @@ exports.resetPassword = async ({ email, oldPassword, newPassword }) => {
     }
 }
 
-exports.adminRefresh = async (refreshToken) => {
+exports.refresh = async (refreshToken) => {
     try {
         const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET_REFRESH)
         const accessToken = jwt.sign({ user: decoded.user }, process.env.JWT_SECRET_ACCESS, { expiresIn: JWT_ACCESS_TIMEOUT })
@@ -107,7 +173,7 @@ exports.adminRefresh = async (refreshToken) => {
         return ok({ accessToken, user: decoded.user })
 
     } catch (err) {
-        Logger.e('services -> auth.service -> adminRefresh: ' + err.message, err)
+        Logger.e('services -> auth.service -> refresh: ' + err.message, err)
         return error()
     }
 }

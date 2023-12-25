@@ -158,7 +158,7 @@ exports.share = async ({ user, shareItem, origin }) => {
             })
         }
 
-        const secureLink = origin + '/login/?p=' + encrypted.encrypted
+        const secureLink = origin + '/login/?p=' + encrypted.encrypted + '&id=' + patient.id
         const emailsToSend = shareItem.emails.map(email => {
             return {
                 name: email,

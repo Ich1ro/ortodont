@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken')
 const { JWT_ACCESS_TIMEOUT } = require('../constants')
-// TODO: Remove "admin" from name after making the token common for all users in the system
+
+// Auth for all users*
 exports.adminAuth = (req, resp, next) => {
     const accessToken = req.headers['Authorization']
     const refreshToken = req.cookies['RefreshToken']
