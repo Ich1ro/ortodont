@@ -2,6 +2,10 @@ const { MAX_PAGINATION_SIZE } = require("../constants")
 const { DB } = require("../utils/db")
 const { Logger } = require('../utils/logger')
 const { error, unauthorized, notFound, ok, badRequest } = require("../utils/response")
+const { invalidEmail } = require("../validators/email.validator")
+const { shareItemValidationResult } = require("../validators/share-item.validator")
+const { encrypt } = require("../utils/aes")
+const { sendEmails } = require("../utils/email-sender")
 
 exports.listTreatments = async ({ user, patientId }) => {
     try {
@@ -106,6 +110,69 @@ exports.patchTreatment = async ({ user, item }) => {
     } catch (err) {
         trx && (await trx.rollback())
         Logger.e("services -> peresentation.service -> patchTreatment: " + err.message, err)
+        return error()
+    }
+}
+
+exports.share = async ({ user, shareItem, origin }) => {
+    try {
+        if (!user || user.role === 2) {
+            return unauthorized()
+        }
+        const result = shareItemValidationResult(shareItem)
+        if (result.invalid) {
+            return badRequest(result.msg)
+        }
+
+        const patient = (await DB.pg
+            .column('id', 'firstName', 'lastName', 'email', 'patientNumber')
+            .select()
+            .from('Patient')
+            .where('id', shareItem.patientId)
+            .andWhere('practiceId', user.practiceId)
+            .andWhere('status', 0)
+            .first())[0]
+        
+        if (!patient) {
+            return notFound()
+        }
+        if (invalidEmail(patient.email)) {
+            return badRequest('Cannot share presentation due to invalid patient email')
+        }
+
+        const patientObj = {
+            id: patient.id,
+            lastName: patient.lastName,
+            patientNumber: patient.patientNumber
+        }
+
+        const patientStr = JSON.stringify(patientObj)
+        const encrypted = encrypt(patientStr)
+
+        const encryptedData = (await DB.pg.select().from('PatientAes').where('patientId', patientObj.id).first())[0]
+        if (!encryptedData) {
+            await DB.pg('PatientAes').insert({
+                patientId: patientObj.id,
+                iv: encrypted.iv,
+                tag: encrypted.tag
+            })
+        }
+
+        const secureLink = origin + '/login/?p=' + encrypted.encrypted
+        const emailsToSend = shareItem.emails.map(email => {
+            return {
+                name: email,
+                email: email,
+                htmlContent: `<html><body>Hello, ${user.email}<br/> This is a link to the presentation of your treatment plan: ${secureLink} Please, use this link to login. <br/> Financial Consult Form <br/>`
+            }
+        })
+
+        await sendEmails(emailsToSend, { name: 'Financial Consult Form', email: 'fcf@gmail.com' }) //TODO: the same
+
+        return ok(shareItem)
+
+    } catch (err) {
+        Logger.e("services -> peresentation.service -> sharePresentation: " + err.message, err)
         return error()
     }
 }

@@ -99,7 +99,7 @@ exports.sendConfirmationCode = async ({ authUser, user }) => {
                 htmlContent: `<html><body>Hello, ${user.email}<br/> This is a confirmation code to verify your email address: ${code} It will expire in 15 minutes. <br/> Financial Consult Form <br/>`
             }
 
-            await sendEmails([emailToSend], { name: 'Financial Consult Form', email: 'fcf@gmail.com' })
+            await sendEmails([emailToSend], { name: 'Financial Consult Form', email: 'fcf@gmail.com' }) // TODO: Email should differ for each companies?
         }
 
         return ok()

@@ -8,3 +8,4 @@ exports.MAX_PAGINATION_SIZE = 1000
 exports.MAX_BATCH_SIZE = 100
 exports.MAX_SEARCH_TERM_LENGTH = 10000
 exports.CODE_EXP = 15 * 6e4 // 15 minutes
+exports.ENCRYPTION_ALGORITHM = 'aes-256-gcm'
