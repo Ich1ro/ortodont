@@ -1,4 +1,4 @@
-const { MAX_PAGINATION_SIZE } = require("../constants")
+const { MAX_PAGINATION_SIZE, MAX_FILE_SIZE, ALLOWED_PDF_EXTENSIONS } = require("../constants")
 const { DB } = require("../utils/db")
 const { Logger } = require('../utils/logger')
 const { error, unauthorized, notFound, ok, badRequest } = require("../utils/response")
@@ -6,6 +6,8 @@ const { invalidEmail } = require("../validators/email.validator")
 const { shareItemValidationResult } = require("../validators/share-item.validator")
 const { encrypt } = require("../utils/aes")
 const { sendEmails } = require("../utils/email-sender")
+const { fileValidationResult } = require("../validators/file.validator")
+const { S3Manager } = require("../utils/s3")
 
 exports.listTreatments = async ({ user, patientId }) => {
     try {
@@ -14,6 +16,9 @@ exports.listTreatments = async ({ user, patientId }) => {
         }
 
         const patient = user.role === 2 ? user.id : patientId
+        if (patient === null || patient === undefined) {
+            return badRequest('Patient id parameter is null or undefined')
+        }
 
         const treatments = (await DB.pg('Treatment')
             .join('TreatmentType', 'Treatment.treatmentTypeId', '=', 'TreatmentType.id')
@@ -132,7 +137,7 @@ exports.share = async ({ user, shareItem, origin }) => {
             .andWhere('practiceId', user.practiceId)
             .andWhere('status', 0)
             .first())[0]
-        
+
         if (!patient) {
             return notFound()
         }
@@ -169,10 +174,103 @@ exports.share = async ({ user, shareItem, origin }) => {
 
         await sendEmails(emailsToSend, { name: 'Financial Consult Form', email: 'fcf@gmail.com' }) //TODO: the same
 
+        await DB.pg('Patient').where('id', shareItem.patientId).update({ status: 1 })
+
         return ok(shareItem)
 
     } catch (err) {
-        Logger.e("services -> peresentation.service -> sharePresentation: " + err.message, err)
+        Logger.e("services -> peresentation.service -> share: " + err.message, err)
         return error()
     }
 }
+
+exports.accept = async ({ user, treatmentId, patientId }) => {
+    try {
+        if (!user) {
+            return unauthorized()
+        }
+
+        const patient = user.role === 2 ? user.id : patientId
+        if (patient === null || patient === undefined) {
+            return badRequest('Patient id parameter is null or undefined')
+        }
+
+        if (treatmentId === null || treatmentId === undefined) {
+            return badRequest('Treatment id parameter is null or undefined')
+        }
+
+        const patientDb = (await DB.pg
+            .column('status', 'id')
+            .select()
+            .from('Patient')
+            .where('patientId', patient)
+            .andWhere('practiceId', user.practiceId)
+            .first())[0]
+
+        if (!patientDb) {
+            return notFound()
+        }
+
+        if (patientDb.status !== 0) {
+            return badRequest('Actual patient status must be 0')
+        }
+
+        await DB.pg('Treatment').where('id', treatmentId).andWhere('patientId', patient).update({ accepted: true })
+
+        return ok()
+
+    } catch (err) {
+        Logger.e("services -> peresentation.service -> accept: " + err.message, err)
+        return error()
+    }
+}
+
+// TODO: Build contract pdf document for GET (pdf viewer or downloading)
+
+exports.postSignedContract = async ({ user, file, patientId }) => {
+    try {
+        if (!user) {
+            return unauthorized()
+        }
+
+        const patient = user.role === 2 ? user.id : patientId
+        if (patient === null || patient === undefined) {
+            return badRequest('Patient id parameter is null or undefined')
+        }
+
+        const fileResult = fileValidationResult(file, MAX_FILE_SIZE, ALLOWED_PDF_EXTENSIONS)
+        if (fileResult.invalid) {
+            return badRequest(fileResult.msg)
+        }
+
+        const patientDb = (await DB.pg
+            .column('status', 'id')
+            .select()
+            .from('Patient')
+            .where('patientId', patient)
+            .andWhere('practiceId', user.practiceId)
+            .first())[0]
+
+        if (!patientDb) {
+            return notFound()
+        }
+
+        if (patientDb.status !== 1) {
+            return badRequest('Actual patient status must be 1')
+        }
+
+        const pdfUrl = await S3Manager.put('contracts', file)
+        if (!pdfUrl) {
+            return error()
+        }
+
+        await DB.pg('Patient').where('id', patient).update({ contractUrl: pdfUrl, status: 2 })
+
+        return ok()
+
+    } catch (err) {
+        Logger.e("services -> peresentation.service -> postSignedContract: " + err.message, err)
+        return error()
+    }
+}
+
